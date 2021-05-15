@@ -5,7 +5,7 @@ import java.util.Set;
 import pro.eddiecache.kits.paxos.comm.Member;
 
 /**
- * 
+ * @author eddie
  * Accepted有成员发出，告知leader，消息已经接受
  */
 public class Accepted implements SpecialMessage, MessageWithSender

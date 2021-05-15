@@ -26,7 +26,7 @@ public class FailureDetector
 	private final Map<Member, Long> lastHeardFrom = new ConcurrentHashMap<Member, Long>();
 	private final byte[] heartbeat;
 
-	private Set<Member> membersAlive = new HashSet<Member>();
+	private final Set<Member> membersAlive = new HashSet<>();
 	private long lastHearbeat = 0;
 	private long time = 0;
 
@@ -60,6 +60,7 @@ public class FailureDetector
 			{
 				continue;
 			}
+
 			if (!lastHeardFrom.containsKey(member))
 			{
 				initialize(time, member);
@@ -75,18 +76,14 @@ public class FailureDetector
 			}
 			else
 			{
-				if (!membersAlive.contains(member))
-				{
-					membersAlive.add(member);
-
-				}
+				membersAlive.add(member);
 			}
 		}
 	}
 
-	private Long initialize(long time, Member member)
+	private void initialize(long time, Member member)
 	{
-		return lastHeardFrom.put(member, time);
+		lastHeardFrom.put(member, time);
 	}
 
 	public void update(long time)

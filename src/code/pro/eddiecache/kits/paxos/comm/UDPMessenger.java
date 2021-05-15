@@ -24,7 +24,7 @@ public class UDPMessenger implements CommLayer
 	public static final int UPDATE_PERIOD = 100;
 
 	/**
-	 * 用于通信使用的socket
+	 * udp socket
 	 */
 	private final DatagramSocket socket;
 
@@ -61,9 +61,9 @@ public class UDPMessenger implements CommLayer
 	/**
 	 * 用于存储信息
 	 */
-	private BlockingQueue<byte[]> msgQueue = new LinkedBlockingQueue<byte[]>();
+	private BlockingQueue<byte[]> msgQueue = new LinkedBlockingQueue<>();
 
-	public UDPMessenger() throws SocketException, UnknownHostException
+	public UDPMessenger() throws SocketException
 	{
 		this(2440);
 	}
@@ -116,7 +116,6 @@ public class UDPMessenger implements CommLayer
 				if (running)
 				{
 					e.printStackTrace();
-
 				}
 
 			}
@@ -240,7 +239,7 @@ public class UDPMessenger implements CommLayer
 				}
 			}
 		}
-	};
+	}
 
 	/**
 	 * 通过信使进行处理

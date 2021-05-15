@@ -18,8 +18,8 @@ public abstract class MultiRequest<T extends Serializable, R extends MessageWith
 	private final GroupMembership membership;
 	protected final CommLayer messenger;
 	protected final byte[] request;
-	protected Map<Member, R> responses = new HashMap<Member, R>();
-	private long lastResend = 0;
+	protected Map<Member, R> responses = new HashMap<>();
+	private long lastResend;
 	private boolean finished = false;
 	private boolean quorumHasBeenReached = false;
 	private boolean allMembersHaveReplied = false;

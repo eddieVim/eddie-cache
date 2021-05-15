@@ -40,20 +40,24 @@ public class LeaderRole implements FailureListener
 	/**
 	 * 发起的提案
 	 */
-	private final Map<Long, Proposal> proposals = new HashMap<Long, Proposal>();
+	private final Map<Long, Proposal> proposals = new HashMap<>();
 
 	/**
 	 * 成功提交的信息
 	 */
-	private final Map<Long, Serializable> successfulMessages = new HashMap<Long, Serializable>();
+	private final Map<Long, Serializable> successfulMessages = new HashMap<>();
 
 	/**
 	 * 成功提交的信息id
 	 */
-	private final Map<Long, Long> successfulMsgIds = new HashMap<Long, Long>();
-	private final HashSet<Long> messagesCirculating = new HashSet<Long>(); // msgIds of messages that were not
+	private final Map<Long, Long> successfulMsgIds = new HashMap<>();
+
+	/**
+	 * msgIds of messages that were not completed.
+	 */
+	private final HashSet<Long> messagesCirculating = new HashSet<>();
 	@SuppressWarnings("rawtypes")
-	private final List<MultiRequest> assistants = new LinkedList<MultiRequest>();
+	private final List<MultiRequest> assistants = new LinkedList<>();
 
 	private long viewNumber = 0;
 
@@ -73,7 +77,7 @@ public class LeaderRole implements FailureListener
 		Member leader = PaxosUtils.selectLeader(membership.getMembers());
 		if (leader.equals(me))
 		{
-			assistants.add(new Election(membership, messenger, time, viewNumber + newViewNumber()));
+			assistants.add(new Election(membership, messenger, time, newViewNumber()));
 		}
 	}
 
@@ -156,7 +160,7 @@ public class LeaderRole implements FailureListener
 	/**
 	 * 发送已经成功同步，但是accepter那边未拥有的信息给accepter
 	 *
-	 * @param missingSuccess 错过的日志的集合
+	 * @param missingSuccess 错过的日志的集合，accepter发送过来的
 	 * @param sender accepter ip:port
 	 */
 	private void sendMissingSuccessMessages(Set<Long> missingSuccess, Member sender)
@@ -188,12 +192,21 @@ public class LeaderRole implements FailureListener
 		}
 	}
 
+	/**
+	 * 生成新的任期
+	 *
+	 * update 2021-05-14：
+	 * 使用递增的方式生成新任期
+	 * 可以避免已经存在leader之后，又有新的leader篡位的情况出现
+	 * 但是可能在集群一启动或者集群leader重新选举的时候进行多次选举的情况
+	 */
 	private long newViewNumber()
 	{
-		int groupSize = membership.groupSize();
-		long previousBallot = viewNumber / groupSize;
-		viewNumber = (previousBallot + 1) * groupSize + membership.getPositionInGroup();
-		return viewNumber;
+//		int groupSize = membership.groupSize();
+//		long previousBallot = viewNumber / groupSize;
+//		viewNumber = (previousBallot + 1) * groupSize + membership.getPositionInGroup();
+//		return viewNumber;
+		return ++viewNumber;
 	}
 
 	@Override
@@ -218,6 +231,7 @@ public class LeaderRole implements FailureListener
 		{
 			Acceptance acceptance = viewAccepted.accepted.get(seqNo);
 			Proposal proposal = proposals.get(seqNo);
+			// 本地存储的该提案丢失，补全本地提案
 			if (proposal == null)
 			{
 				proposals.put(seqNo, new Proposal(acceptance.viewNumber, acceptance.message, acceptance.msgId));
@@ -253,6 +267,7 @@ public class LeaderRole implements FailureListener
 
 	/**
 	 * 负责选举工作的助理
+	 * 并且在选举过程中，同步各个节点之间的提案数据
 	 */
 	private class Election extends MultiRequest<NewView, ViewAccepted>
 	{
@@ -266,6 +281,7 @@ public class LeaderRole implements FailureListener
 
 		/**
 		 * 过滤remote-server的心跳信息
+		 * 并且用于提案数据的同步工作
 		 */
 		@Override
 		protected ViewAccepted filterResponse(Serializable message)
@@ -276,6 +292,7 @@ public class LeaderRole implements FailureListener
 				if (viewAccepted.viewNumber != viewNumber) {
 					return null;
 				}
+				// proposal sync
 				registerViewAcceptance(viewAccepted);
 				return viewAccepted;
 			}
@@ -285,6 +302,10 @@ public class LeaderRole implements FailureListener
 			}
 		}
 
+		/**
+		 * 当选leader
+		 * 上任后，向paxos集群同步自己的信息
+		 */
 		@Override
 		protected void onQuorumReached()
 		{
@@ -293,12 +314,13 @@ public class LeaderRole implements FailureListener
 
 			for (Long seqNo : proposals.keySet())
 			{
-				Proposal proposal = proposals.get(seqNo);
-				if (proposal != null)
+				Proposal localProposal = proposals.get(seqNo);
+				if (localProposal != null)
 				{
-					Serializable choice = proposal.newestOutcome;
-					long msgId = proposal.getMsgId();
+					Serializable choice = localProposal.newestOutcome;
+					long msgId = localProposal.getMsgId();
 					messagesCirculating.add(msgId);
+					// paxos集群同步proposal
 					assistants.add(new MultiAccept(membership, messenger, seqNo, choice, msgId));
 				}
 			}
@@ -367,7 +389,6 @@ public class LeaderRole implements FailureListener
 	/**
 	 * 用于判断某一提案是否提交成功的助理
 	 * 属于二阶段提交的第二阶段
-	 * 负责判断paxos-cluster中的有多少个节点
 	 */
 	private class MultiSuccess extends MultiRequest<Success, SuccessAck>
 	{
@@ -401,7 +422,6 @@ public class LeaderRole implements FailureListener
 		@Override
 		protected void onCompleted()
 		{
-
 			successfulMessages.remove(seqNo);
 			successfulMsgIds.remove(msgId);
 			messagesCirculating.remove(msgId);

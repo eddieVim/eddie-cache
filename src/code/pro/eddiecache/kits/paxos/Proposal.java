@@ -43,6 +43,7 @@ public class Proposal
 
 	/**
 	 * 接收该提议
+	 * 若提案冲突（信息不一致），则以viewNo大的为准
 	 */
 	public void acceptOutcome(long viewNo, Serializable outcome, long msgId)
 	{

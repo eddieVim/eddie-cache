@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import pro.eddiecache.core.CacheEventQueueFactory;
 import pro.eddiecache.kits.paxos.comm.CommLayer;
 import pro.eddiecache.kits.paxos.comm.Member;
 import pro.eddiecache.kits.paxos.messages.Abort;
@@ -38,7 +37,7 @@ public class AcceptorRole
 	/**
 	 * what we accepted for each seqNo
 	 */
-	Map<Long, Acceptance> accepted = new HashMap<Long, Acceptance>();
+	Map<Long, Acceptance> accepted = new HashMap<>();
 
 	private Member leader;
 	private long viewNumber;
@@ -85,6 +84,9 @@ public class AcceptorRole
 		}
 	}
 
+	/**
+	 * 生成一个消息Id
+	 */
 	private long createMsgId(Serializable message)
 	{
 		return myPositionInGroup * MAX_CIRCULATING_MESSAGES
@@ -114,21 +116,17 @@ public class AcceptorRole
 	}
 
 	/**
-	 * 进入一个新的view (Leader更新换代)
+	 * 进入一个新的view (Leader选举)
 	 */
 	private void onNewView(NewView newView)
 	{
-		if (newView.viewNumber > viewNumber)
+		if (newView.viewNumber >= viewNumber)
 		{
 			if (log.isDebugEnabled()) {
-				log.debug(me + ": setting leader to " + newView.leader);
+				log.debug(me + ": vote to " + newView.leader);
 			}
 			this.leader = newView.leader;
 			this.viewNumber = newView.viewNumber;
-			messenger.sendTo(leader, PaxosUtils.serialize(new ViewAccepted(viewNumber, accepted, me)));
-		}
-		else if (newView.viewNumber == viewNumber && newView.leader.equals(leader))
-		{
 			messenger.sendTo(leader, PaxosUtils.serialize(new ViewAccepted(viewNumber, accepted, me)));
 		}
 	}

@@ -38,6 +38,10 @@ public class GroupMembership
 		this.positionInGroup = findPositionInGroup(me, members);
 	}
 
+	/**
+	 * 返回本机的ID
+	 * @return 本机ID
+	 */
 	public Member getUID()
 	{
 		return me;

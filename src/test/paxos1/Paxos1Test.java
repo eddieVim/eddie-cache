@@ -22,14 +22,12 @@ public class Paxos1Test
 		//main线程休眠，等待服务发现和注册的完成
 		Thread.sleep(10000);
 
-		System.out.println(cacheKitAccess.get("id0"));
-
 		int max = 3;
-
 		for (int i = 0; i < max; i++)
 		{
 			cacheKitAccess.put("id" + i, i + 666);
 		}
+
 		Object id0 = cacheKitAccess.get("id0");
 		System.out.println("缓存对象" + id0);
 

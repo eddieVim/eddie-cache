@@ -12,7 +12,11 @@ import pro.eddiecache.kits.paxos.messages.NoOp;
 public class BufferedReceiver
 {
 	private final Receiver receiver;
-	private Map<Long, Serializable> receiverBuffer = new HashMap<Long, Serializable>();
+	/**
+	 * 本节点上已经接受的MSG
+	 * k-v: seqNo - MSG
+	 */
+	private final Map<Long, Serializable> receiverBuffer = new HashMap<>();
 
 	private long receivedNo = -1;
 
@@ -21,6 +25,11 @@ public class BufferedReceiver
 		this.receiver = receiver;
 	}
 
+	/**
+	 * 接受来自leader的信息
+	 * 1 非NoOp，则进行同步信息
+	 * 2 NoOp信息，用于线性补全信息，即将每个当前节点之前的每一条log都被chosen
+	 */
 	public void receive(long seqNo, Serializable message)
 	{
 		if (receiver != null)
